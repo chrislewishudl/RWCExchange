@@ -10,7 +10,7 @@ namespace RWCExchange
     public class SlackWebHookHandler : WebHookHandler
     {
         private readonly Regex _regex = new Regex(@"^\:(?<bs>buy|sell)\s+(?<country>[A-Za-z]{3})\s+\@\s+(?<price>[0-9]+(?:\.[0-9]{2})?)");
-        private readonly Regex _regexConfig = new Regex(@"^:show\s+(?<show>(bids|offers|countries|owners))");
+        private readonly Regex _regexConfig = new Regex(@"^:show\s+(?<show>(bids|offers|countries|owners|market\s+(?<country>[A-Za-z]{3})))");
 
         private Task ReturnMessage(string message, WebHookHandlerContext context)
         {
