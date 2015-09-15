@@ -3,7 +3,14 @@ using System.Collections.Generic;
 
 namespace RWCExchange
 {
-    internal class Bid : IComparable<Bid>
+    public class Trade
+    {
+        public Bid Bid { get; set; }
+        public Ask Ask { get; set; }
+        public double Price { get; set; }
+    }
+
+    public class Bid : IComparable<Bid>
     {
         public DateTime TimeStamp { get; set; }
         public string User { get; set; }
@@ -11,14 +18,14 @@ namespace RWCExchange
 
         public int CompareTo(Bid other)
         {
-            if (Price < other.Price) return -1;
-            if (Price > other.Price) return 1;
+            if (Price > other.Price) return -1;
+            if (Price < other.Price) return 1;
             if (TimeStamp < other.TimeStamp) return -1;
             return TimeStamp > other.TimeStamp ? 1 : 0;
         }
     }
 
-    internal class Ask : IComparable<Ask>
+    public class Ask : IComparable<Ask>
     {
         public DateTime TimeStamp { get; set; }
         public string User { get; set; }
@@ -26,8 +33,8 @@ namespace RWCExchange
 
         public int CompareTo(Ask other)
         {
-            if (Price > other.Price) return -1;
-            if (Price < other.Price) return 1;
+            if (Price < other.Price) return -1;
+            if (Price > other.Price) return 1;
             if (TimeStamp < other.TimeStamp) return -1;
             return TimeStamp > other.TimeStamp ? 1 : 0;
         }
@@ -73,12 +80,43 @@ namespace RWCExchange
             return _owners[country] == user;
         }
 
-        public bool ChangeOwner(string owner, string country)
+        public Trade AddBid(string country,Bid bid)
         {
-            _owners[country] = owner;
-            return true;
+            var lowestAsk = _asks[country][0];
+            if (bid.Price >= lowestAsk.Price && lowestAsk.User != bid.User)
+            {
+                _asks[country].Remove(lowestAsk);
+                _owners[country] = bid.User;
+                return new Trade {Bid = bid, Ask = lowestAsk, Price = bid.Price};
+            }
+            _bids[country].Add(bid);
+            _bids[country].Sort();
+            return null;
         }
 
+        public Trade AddAsk(string country, Ask ask)
+        {
+            var highestBid = _bids[country][0];
+            if (highestBid.Price >= ask.Price && ask.User != highestBid.User)
+            {
+                _bids[country].Remove(highestBid);
+                _owners[country] = ask.User;
+                return new Trade { Bid = highestBid, Ask = ask, Price = ask.Price };
+            }
+            _asks[country].Add(ask);
+            _asks[country].Sort();
+            return null;
+        }
+
+        public Bid GetBestBid(string country)
+        {
+            return _bids[country][0];
+        }
+
+        public Ask GetBestAsk(string country)
+        {
+            return _asks[country][0];
+        }
 
 
     }
