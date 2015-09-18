@@ -1,180 +1,97 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using RWCExchange.Models;
 
 namespace RWCExchange
 {
-    public class Trade
-    {
-        public Bid Bid { get; set; }
-        public Ask Ask { get; set; }
-        public double Price { get; set; }
-        public bool Update { get; set; }
-    }
-
-    public class Bid : IComparable<Bid>, IEquatable<Bid>
-    {
-        public DateTime TimeStamp { get; set; }
-        public string User { get; set; }
-        public double Price { get; set; }
-
-        public int CompareTo(Bid other)
-        {
-            if (Price > other.Price) return -1;
-            if (Price < other.Price) return 1;
-            if (TimeStamp < other.TimeStamp) return -1;
-            return TimeStamp > other.TimeStamp ? 1 : 0;
-        }
-
-        public bool Equals(Bid other)
-        {
-            if (ReferenceEquals(null, other)) return false;
-            if (ReferenceEquals(this, other)) return true;
-            return TimeStamp.Equals(other.TimeStamp) && string.Equals(User, other.User) && Price.Equals(other.Price);
-        }
-
-        public override bool Equals(object obj)
-        {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != this.GetType()) return false;
-            return Equals((Bid)obj);
-        }
-
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                var hashCode = TimeStamp.GetHashCode();
-                hashCode = (hashCode * 397) ^ (User != null ? User.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ Price.GetHashCode();
-                return hashCode;
-            }
-        }
-
-    }
-
-    public class Ask : IComparable<Ask>, IEquatable<Ask>
-    {
-        public DateTime TimeStamp { get; set; }
-        public string User { get; set; }
-        public double Price { get; set; }
-
-        public int CompareTo(Ask other)
-        {
-            if (Price < other.Price) return -1;
-            if (Price > other.Price) return 1;
-            if (TimeStamp < other.TimeStamp) return -1;
-            return TimeStamp > other.TimeStamp ? 1 : 0;
-        }
-
-        public bool Equals(Ask other)
-        {
-            if (ReferenceEquals(null, other)) return false;
-            if (ReferenceEquals(this, other)) return true;
-            return TimeStamp.Equals(other.TimeStamp) && string.Equals(User, other.User) && Price.Equals(other.Price);
-        }
-
-        public override bool Equals(object obj)
-        {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != this.GetType()) return false;
-            return Equals((Ask) obj);
-        }
-
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                var hashCode = TimeStamp.GetHashCode();
-                hashCode = (hashCode*397) ^ (User != null ? User.GetHashCode() : 0);
-                hashCode = (hashCode*397) ^ Price.GetHashCode();
-                return hashCode;
-            }
-        }
-    }
-
     public sealed class Exchange
     {
-        private static readonly Lazy<Exchange> _instance = new Lazy<Exchange>(()=>new Exchange());
+        private static readonly Lazy<Exchange> _instance = new Lazy<Exchange>(()=>new Exchange(new RWCDatabaseContext()));
 
-        private readonly Dictionary<string, List<Bid>> _bids;
-        private readonly Dictionary<string, List<Ask>> _asks;
-
-        private readonly Dictionary<string, string> _owners; 
-
-        private readonly List<string> _countries; 
+//        private readonly Dictionary<string, List<Bid>> _bids;
+//        private readonly Dictionary<string, List<Ask>> _asks;
+//
+//        private readonly Dictionary<string, string> _owners; 
+//
+//        private readonly List<string> _countries; 
 
         public static Exchange Instance => _instance.Value;
+        private RWCDatabaseContext _database;
 
-        private Exchange()
+        private Exchange(RWCDatabaseContext context)
         {
-            _countries = new List<string> { "ARG", "AUS", "CAN", "ENG", "FJI", "FRA", "GEO", "IRE", "ITA", "JPN", "NAM", "NZL", "ROM", "SAM", "SCO", "RSA", "TGA", "URU", "USA", "WAL" };
-            _bids = new Dictionary<string, List<Bid>>();
-            _asks = new Dictionary<string, List<Ask>>();
-            _owners = new Dictionary<string, string>();
-            foreach (var c in _countries)
-            {
-                _bids.Add(c,new List<Bid>());
-                _asks.Add(c,new List<Ask>());
-                _owners.Add(c,string.Empty);
-            }
+            _database = context;
+//            _bids = new Dictionary<string, List<Bid>>();
+//            _asks = new Dictionary<string, List<Ask>>();
+//            _owners = new Dictionary<string, string>();
+//            foreach (var c in _countries)
+//            {
+//                _bids.Add(c,new List<Bid>());
+//                _asks.Add(c,new List<Ask>());
+//                _owners.Add(c,string.Empty);
+//            }
         }
 
         public bool IsValidCountry(string country)
         {
-            return _countries.Contains(country);
+            var countryFound = _database.Countries.FirstOrDefault(i=>i.Code==country);
+            return countryFound!=null;
         }
 
         public bool CountryDropped(string country)
         {
-            return !_owners.ContainsKey(country);
+            var countryFound =_database.Countries.FirstOrDefault(i=>i.Code==country);
+            return countryFound?.User == null;
         }
 
         public bool IsCurrentOwner(string country, string user)
         {
-            return _owners[country] == user;
+            return _database.Countries.FirstOrDefault(i => i.Code == country)?.User?.UserName == user;
         }
 
         public List<Bid> GetBids(string country)
         {
-            return _bids[country].ToList();
+            var dbCountry = _database.Countries.FirstOrDefault(i => i.Code == country);
+            return dbCountry?.Bids.ToList() ?? new List<Bid>();
         }
 
         public List<Ask> GetAsks(string country)
         {
-            return _asks[country].ToList();
+            var dbCountry = _database.Countries.FirstOrDefault(i => i.Code == country);
+            return dbCountry?.Asks.ToList() ?? new List<Ask>();
         }
 
         public List<KeyValuePair<string, string>> GetOwners()
         {
-            return _owners.ToList();
+            return _database.Countries.Select(i=>new KeyValuePair<string,string>(i.Code,i.User.UserName)).ToList();
         } 
 
-        public Trade AddBid(string country,Bid bid)
+        public Trade AddBid(string country,Bid bid, out bool updated)
         {
-            var existingForUser = _bids[country].FirstOrDefault(i => i.User == bid.User);
-            var trade = new Trade();
+            var dbCountry = _database.Countries.First(i => i.Code == country);
+            var bids = dbCountry.Bids.ToList();
+            var ask = dbCountry.Ask;
+            var existingForUser = bids.FirstOrDefault(i=>i.User.UserName==bid.User.UserName);
+            updated = false;
             if (existingForUser != null)
             {
                 existingForUser.TimeStamp = bid.TimeStamp;
                 existingForUser.Price = bid.Price;
-                trade.Update = true;
-                _bids[country].Sort();
-                if (!_asks[country].Any() || !_bids[country][0].Equals(bid))
+                updated = true;
+                _database.SaveChanges();
+                if (ask==null || !bids.OrderByDescending(i=>i.Price).ThenBy(i=>i.TimeStamp).First().Equals(bid))
                 {
-                    return trade;
+                    return null;
                 }
             }
-            if (!_asks[country].Any() && !trade.Update)
+            bid.Country = dbCountry;
+            if (ask==null && !updated)
             {
-                _bids[country].Add(bid);
-                _bids[country].Sort();
-                return trade;
+                bids.Add(bid);
+                return null;
             }
-            var lowestAsk = _asks[country][0];
-            if (bid.Price >= lowestAsk.Price)
+            if (bid.Price >= ask.Price)
             {
                 _asks[country].Clear();
                 _owners[country] = bid.User;
