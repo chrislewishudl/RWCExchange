@@ -30,6 +30,7 @@ namespace RWCExchange.Models
             return CountryID;
         }
 
+        public int UserID { get; set; }
         public virtual User User{ get; set; }
 
         public virtual ICollection<Bid> Bids { get; set; }

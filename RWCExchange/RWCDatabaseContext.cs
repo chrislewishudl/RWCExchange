@@ -25,7 +25,8 @@ namespace RWCExchange
                         .WithRequired(i => i.Country);
             modelBuilder.Entity<Country>()
                         .HasOptional(i => i.User)
-                        .WithRequired(i => i.Country);
+                        .WithMany(i => i.Countries)
+                        .HasForeignKey(i=>i.UserID);
             modelBuilder.Entity<Bid>()
                         .HasRequired(i => i.Country)
                         .WithMany(i => i.Bids)

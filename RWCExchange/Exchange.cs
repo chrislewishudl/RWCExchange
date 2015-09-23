@@ -106,7 +106,7 @@ namespace RWCExchange
                 {
                     var currentSeller = dbCountry.User.UserID;
                     dbCountry.Ask = null;
-                    dbCountry.User.Country = null;
+                    dbCountry.User.Countries.Remove(dbCountry);
                     dbCountry.User = bid.User;
                     if (updated)
                     {
@@ -164,7 +164,7 @@ namespace RWCExchange
                 if (highestBid.Price >= ask.Price)
                 {
                     dbBids.Remove(highestBid);
-                    dbCountry.User.Country = null;
+                    dbCountry.User.Countries.Remove(dbCountry);
                     dbCountry.User = highestBid.User;
                     dbCountry.Ask = null;
                     var trade = new Trade()
