@@ -67,8 +67,11 @@ namespace RWCExchange
         {
             using (var database = new RWCDatabaseContext())
             {
-                return database.Countries.Select(i => new KeyValuePair<string, string>(i.Code, i.User.UserName))
-                                .ToList();
+                var owners = (from country in database.Countries
+                              select new { country.Code, country.User.UserName})
+                             .ToList();
+
+                return new List<KeyValuePair<string, string>>(owners.Select(i=>new KeyValuePair<string, string>(i.Code,i.UserName)));
             }
         } 
 
