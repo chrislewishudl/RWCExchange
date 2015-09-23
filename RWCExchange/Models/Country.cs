@@ -8,6 +8,7 @@ namespace RWCExchange.Models
         public int CountryID { get; set; }
         public string Code { get; set; }
 
+        public bool IsDropped { get; set; }
 
         public bool Equals(Country other)
         {
@@ -29,10 +30,10 @@ namespace RWCExchange.Models
             return CountryID;
         }
 
-        public int? UserID { get; set; }
         public virtual User User{ get; set; }
 
         public virtual ICollection<Bid> Bids { get; set; }
+        
         public virtual Ask Ask { get; set; } 
     }
 }

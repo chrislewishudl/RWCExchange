@@ -6,8 +6,12 @@ namespace RWCExchange.Models
     {
         public int AskID { get; set; }
         public DateTime TimeStamp { get; set; }
+
         public int CountryID { get; set; }
         public virtual Country Country { get; set; }
+
+        public int UserID { get; set; }
+        public virtual User User { get; set; }
 
         public double Price { get; set; }
 

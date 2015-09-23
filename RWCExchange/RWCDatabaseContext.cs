@@ -20,6 +20,30 @@ namespace RWCExchange
         protected override void OnModelCreating(DbModelBuilder modelBuilder)
         {
             modelBuilder.Conventions.Remove<PluralizingTableNameConvention>();
+            modelBuilder.Entity<Country>()
+                        .HasOptional(i => i.Ask)
+                        .WithRequired(i => i.Country);
+            modelBuilder.Entity<Country>()
+                        .HasOptional(i => i.User)
+                        .WithRequired(i => i.Country);
+            modelBuilder.Entity<Bid>()
+                        .HasRequired(i => i.Country)
+                        .WithMany(i => i.Bids)
+                        .HasForeignKey(i => i.CountryID);
+            modelBuilder.Entity<Bid>()
+                        .HasRequired(i => i.User);
+            modelBuilder.Entity<Ask>()
+                        .HasRequired(i => i.User);
+            modelBuilder.Entity<Bid>()
+                        .HasRequired(i => i.Country);
+            modelBuilder.Entity<Ask>()
+                        .HasRequired(i => i.Country);
+            modelBuilder.Entity<Trade>()
+                        .HasRequired(i => i.Country);
+            modelBuilder.Entity<Trade>()
+                        .HasRequired(i => i.Buyer);
+            modelBuilder.Entity<Trade>()
+                        .HasRequired(i => i.Seller);
         }
     }
 }

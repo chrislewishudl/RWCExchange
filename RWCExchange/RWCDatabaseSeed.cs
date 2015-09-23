@@ -5,7 +5,7 @@ using RWCExchange.Models;
 
 namespace RWCExchange
 {
-    public class RWCDatabaseSeed : CreateDatabaseIfNotExists<RWCDatabaseContext>
+    public class RWCDatabaseSeed : DropCreateDatabaseIfModelChanges<RWCDatabaseContext>
     {
         protected override void Seed(RWCDatabaseContext context)
         {
@@ -34,8 +34,9 @@ namespace RWCExchange
                             {"johnmc",context.Countries.FirstOrDefault(i=>i.Code=="ITA")},
                             {"jjramos",context.Countries.FirstOrDefault(i=>i.Code=="USA")},
                             {"joooe",context.Countries.FirstOrDefault(i=>i.Code=="WAL")},
+                            {"house",null}
                         };
-            context.Users.AddRange(users.Select(i => new User() {UserName = i.Key, CountryID = i.Value.CountryID}));
+            context.Users.AddRange(users.Select(i => new User{UserName = i.Key, Country = i.Value}));
             context.SaveChanges();
             base.Seed(context);
         }

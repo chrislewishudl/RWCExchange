@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.AspNet.WebHooks;
+using RWCExchange.Models;
 
 namespace RWCExchange
 {
@@ -97,18 +98,26 @@ namespace RWCExchange
             {
                 return ReturnMessage($"This country is already out of the cup. Come on, keep up! Go {(isBuy?"buy":"sell")} another one.",context);
             }
-            var isCurrentOwner = Exchange.Instance.IsCurrentOwner(country, user);
+            int userId;
+            using (var database = new RWCDatabaseContext())
+            {
+                var dbUser = database.Users.FirstOrDefault(i => i.UserName == user);
+                if(dbUser==null)return ReturnMessage("Sorry but you're not a valid user, speak to the boss!",context);
+                userId = dbUser.UserID;
+            }
+            var isCurrentOwner = Exchange.Instance.IsCurrentOwner(country, userId);
             if (isBuy && isCurrentOwner) return ReturnMessage($"@{user} you already own {country}! You can't buy it again you fool!", context);
             if (!isBuy && !isCurrentOwner) return ReturnMessage($"@{user} you dont own {country}. You can't sell something you don't own you fool!", context);
             if (isBuy)
             {
                 if(!Exchange.Instance.CurrentlyOwned(country))return ReturnMessage($"{country} doesn't yet have an owner, wait until it does before you start to place bids.",context);
-                var trade = Exchange.Instance.AddBid(country,new Bid { Price = price, TimeStamp = DateTime.UtcNow, User = user });
-                if (trade?.Bid != null && trade.Ask!=null)
+                bool updated;
+                var trade = Exchange.Instance.AddBid(country,new Bid { Price = price, TimeStamp = DateTime.UtcNow, User = new User {UserID = userId,UserName = user} },out updated);
+                if (trade!=null)
                 {
-                    return ReturnMessage($"WOOOO! You traded! @{user} you now own {country}, and you owe @{trade.Ask.User} *£{trade.Price}*. Pay up or I'll send the bailiffs!", context);
+                    return ReturnMessage($"WOOOO! You traded! @{user} you now own {country}, and you owe @{trade.Seller.UserName} *£{trade.Price}*. Pay up or I'll send the bailiffs!", context);
                 }
-                if (trade != null && trade.Update)
+                if (updated)
                 {
                     return ReturnMessage($"@{user} you're buy request has been updated for {country}. Let's hope we can get a matching sale price.",context);
                 }
@@ -116,12 +125,13 @@ namespace RWCExchange
             }
             else
             {
-                var trade = Exchange.Instance.AddAsk(country, new Ask{ Price = price, TimeStamp = DateTime.UtcNow, User = user });
-                if (trade?.Bid != null && trade.Ask != null)
+                bool updated;
+                var trade = Exchange.Instance.AddAsk(country, new Ask{ Price = price, TimeStamp = DateTime.UtcNow,User = new User {UserID = userId,UserName = user}},out updated);
+                if (trade!=null)
                 {
-                    return ReturnMessage($"WOOOO! You traded! @{trade.Bid.User} you now own {country}, and you owe @{user} *£{trade.Price}*. Pay up or I'll send the bailiffs!", context);
+                    return ReturnMessage($"WOOOO! You traded! @{trade.Buyer.UserName} you now own {country}, and you owe @{user} *£{trade.Price}*. Pay up or I'll send the bailiffs!", context);
                 }
-                if (trade != null && trade.Update)
+                if (updated)
                 {
                     return ReturnMessage($"@{user} you're sell request has been update for {country}. Let's wait for a buyer!",context);
                 }
@@ -144,14 +154,15 @@ namespace RWCExchange
                 switch (showWhat)
                 {
                     case "bids":
-                        return ReturnMessage($"*Bids for {country}:*\n" + string.Join("\n", Exchange.Instance.GetBids(country).Select(i => $"Price: *{i.Price}*, User: @{i.User}")), context);
+                        return ReturnMessage($"*Bids for {country}:*\n" + string.Join("\n", Exchange.Instance.GetBids(country).Select(i => $"Price: *{i.Price}*, User: @{i.User.UserName}")), context);
                     case "offers":
-                        return ReturnMessage($"*Offers for {country}:*\n" + string.Join("\n", Exchange.Instance.GetAsks(country).Select(i => $"Price: *{i.Price}*, User: @{i.User}")), context);
+                        var ask = Exchange.Instance.GetAsk(country);
+                        return ReturnMessage($"*Offers for {country}:*\n" + $"Price: *{ask.Price}*, User: @{ask.User.UserName}", context);
                     case "market":
                         var bestBid = Exchange.Instance.GetBestBid(country);
                         var bestAsl = Exchange.Instance.GetBestAsk(country);
-                        var bidString = bestBid == null ? "_No Bids_" : $"Bid Price: *{bestBid.Price}* @{bestBid.User}";
-                        var askString = bestAsl == null ? "_No asks_" : $"Ask Price: *{bestAsl.Price}* @{bestAsl.User}";
+                        var bidString = bestBid == null ? "_No Bids_" : $"Bid Price: *{bestBid.Price}* @{bestBid.User.UserName}";
+                        var askString = bestAsl == null ? "_No asks_" : $"Ask Price: *{bestAsl.Price}* @{bestAsl.User.UserName}";
                         return ReturnMessage($"*Best Market for {country}:*\n" + bidString + "     " + askString, context);
                 }
             }
@@ -191,7 +202,13 @@ namespace RWCExchange
             {
                 return ReturnMessage("This country is already out of the cup. Come on, keep up!", context);
             }
-            if (Exchange.Instance.SetOwner(country, owner))
+            User u;
+            using (var database = new RWCDatabaseContext())
+            {
+                u = database.Users.FirstOrDefault(i => i.UserName == owner);
+            }
+            if (u == null) return ReturnMessage("Invalid username!", context);
+            if (Exchange.Instance.SetOwner(country, u))
             {
                 ReturnMessage($"Congrats @{owner} You now own {country}.", context);
             }
@@ -208,13 +225,21 @@ namespace RWCExchange
             {
                 return ReturnMessage("This country is already out of the cup. Come on, keep up!", context);
             }
-            if (!isBid && !Exchange.Instance.IsCurrentOwner(country, user))
+            int userId;
+            using (var database = new RWCDatabaseContext())
+            {
+                var dbUser = database.Users.FirstOrDefault(i => i.UserName == user);
+                if (dbUser == null) return ReturnMessage($"Sorry {user} but you don't appear to be a valid user on the exchange. Speak to the boss!",context);
+                userId = dbUser.UserID;
+            }
+
+            if (!isBid && !Exchange.Instance.IsCurrentOwner(country, userId))
             {
                 return ReturnMessage($"You aren't the current owner of {country}, so you have no offers in the market.",context);
             }
             if (isBid)
             {
-                if (Exchange.Instance.PullBid(country, user))
+                if (Exchange.Instance.PullBid(country, userId))
                     return ReturnMessage($"Thanks @{user} You're bid for {country} has been dropped from the market.", context);
                 ReturnMessage($"{user} - Pull failed. Do you even have a bid in the market?", context);
             }
