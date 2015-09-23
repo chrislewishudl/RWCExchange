@@ -8,5 +8,8 @@ namespace RWCExchange.Models
         public string UserName { get; set; }
 
         public virtual ICollection<Country> Countries { get; set; }
+
+        public virtual ICollection<Trade> BuyTrades { get; set; } 
+        public virtual ICollection<Trade> SellTrades { get; set; } 
     }
 }

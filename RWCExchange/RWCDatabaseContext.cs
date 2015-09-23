@@ -26,11 +26,13 @@ namespace RWCExchange
             modelBuilder.Entity<Country>()
                         .HasOptional(i => i.User)
                         .WithMany(i => i.Countries)
-                        .HasForeignKey(i=>i.UserID);
+                        .HasForeignKey(i=>i.UserID)
+                        .WillCascadeOnDelete(false);
             modelBuilder.Entity<Bid>()
                         .HasRequired(i => i.Country)
                         .WithMany(i => i.Bids)
-                        .HasForeignKey(i => i.CountryID);
+                        .HasForeignKey(i => i.CountryID)
+                        .WillCascadeOnDelete(true);
             modelBuilder.Entity<Bid>()
                         .HasRequired(i => i.User);
             modelBuilder.Entity<Ask>()
@@ -42,9 +44,15 @@ namespace RWCExchange
             modelBuilder.Entity<Trade>()
                         .HasRequired(i => i.Country);
             modelBuilder.Entity<Trade>()
-                        .HasRequired(i => i.Buyer);
+                        .HasRequired(i => i.Buyer)
+                        .WithMany(i=>i.BuyTrades)
+                        .HasForeignKey(i=>i.BuyerID)
+                        .WillCascadeOnDelete(false);
             modelBuilder.Entity<Trade>()
-                        .HasRequired(i => i.Seller);
+                        .HasRequired(i => i.Seller)
+                        .WithMany(i=>i.SellTrades)
+                        .HasForeignKey(i=>i.SellerID)
+                        .WillCascadeOnDelete(false);
         }
     }
 }

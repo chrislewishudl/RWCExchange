@@ -1,6 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
-
-namespace RWCExchange.Models
+﻿namespace RWCExchange.Models
 {
     public class Trade
     {
@@ -11,11 +9,9 @@ namespace RWCExchange.Models
         public virtual Country Country { get; set; }
         
         public int SellerID { get; set; }
-        [ForeignKey("SellerID")]
         public virtual User Seller { get; set; }
         
         public int BuyerID { get; set; }
-        [ForeignKey("BuyerID")]
         public virtual User Buyer { get; set; }
     }
 }

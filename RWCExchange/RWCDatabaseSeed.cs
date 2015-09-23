@@ -25,7 +25,7 @@ namespace RWCExchange
                             {"siobhan",new Collection<Country> {context.Countries.FirstOrDefault(i=>i.Code=="CAN")}},
                             {"brentkelly",new Collection<Country> {context.Countries.FirstOrDefault(i=>i.Code=="TGA")}},
                             {"jonny",new Collection<Country> {context.Countries.FirstOrDefault(i=>i.Code=="SAM")}},
-                            {"joooe",new Collection<Country> {context.Countries.FirstOrDefault(i=>i.Code=="GEO")}},
+                            {"joooe",new Collection<Country> {context.Countries.FirstOrDefault(i=>i.Code=="GEO"),context.Countries.FirstOrDefault(i=>i.Code=="WAL")}},
                             {"joshuabalfe",new Collection<Country> {context.Countries.FirstOrDefault(i=>i.Code=="SCO")}},
                             {"damtur",new Collection<Country> {context.Countries.FirstOrDefault(i=>i.Code=="ARG")}},
                             {"stu",new Collection<Country> {context.Countries.FirstOrDefault(i=>i.Code=="RSA")}},
@@ -34,7 +34,6 @@ namespace RWCExchange
                             {"vasman",new Collection<Country> {context.Countries.FirstOrDefault(i=>i.Code=="IRE")}},
                             {"johnmc",new Collection<Country> {context.Countries.FirstOrDefault(i=>i.Code=="ITA")}},
                             {"jjramos",new Collection<Country> {context.Countries.FirstOrDefault(i=>i.Code=="USA")}},
-                            {"joooe",new Collection<Country> {context.Countries.FirstOrDefault(i=>i.Code=="WAL")}},
                             {"house",new Collection<Country>()}
                         };
             context.Users.AddRange(users.Select(i => new User{UserName = i.Key, Countries = i.Value}));
