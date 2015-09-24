@@ -186,6 +186,7 @@ namespace RWCExchange
                         SellerID = ask.UserID,
                         CountryID = dbCountry.CountryID,
                         Price = ask.Price,
+                        TimeStamp = DateTime.UtcNow
                     };
                     database.Trades.Add(trade);
                     database.SaveChanges();
@@ -204,7 +205,7 @@ namespace RWCExchange
             using (var database = new RWCDatabaseContext())
             {
                 var dbCountry = database.Countries.Include("Bids.User").FirstOrDefault(i => i.Code == country);
-                return dbCountry==null||!dbCountry.Bids.Any()?null: dbCountry.Bids.First();
+                return dbCountry==null||!dbCountry.Bids.Any()?null: dbCountry.Bids.OrderByDescending(i=>i.Price).ThenBy(i=>i.TimeStamp).First();
             }
             
         }
