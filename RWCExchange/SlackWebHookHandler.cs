@@ -112,10 +112,16 @@ namespace RWCExchange
             {
                 if(!Exchange.Instance.CurrentlyOwned(country))return ReturnMessage($"{country} doesn't yet have an owner, wait until it does before you start to place bids.",context);
                 bool updated;
-                var trade = Exchange.Instance.AddBid(country,new Bid { Price = price, TimeStamp = DateTime.UtcNow, User = new User {UserID = userId,UserName = user} },out updated);
+                var trade = Exchange.Instance.AddBid(country,new Bid { Price = price, TimeStamp = DateTime.UtcNow, UserID = userId},out updated);
                 if (trade!=null)
                 {
-                    return ReturnMessage($"WOOOO! You traded! @{user} you now own {country}, and you owe @{trade.Seller.UserName} *£{trade.Price}*. Pay up or I'll send the bailiffs!", context);
+                    //find seller by name
+                    string sellerName;
+                    using (var db = new RWCDatabaseContext())
+                    {
+                        sellerName = db.Users.Find(trade.SellerID).UserName;
+                    }
+                    return ReturnMessage($"WOOOO! You traded! @{user} you now own {country}, and you owe @{sellerName} *£{trade.Price}*. Pay up or I'll send the bailiffs!", context);
                 }
                 if (updated)
                 {
@@ -126,10 +132,16 @@ namespace RWCExchange
             else
             {
                 bool updated;
-                var trade = Exchange.Instance.AddAsk(country, new Ask{ Price = price, TimeStamp = DateTime.UtcNow,User = new User {UserID = userId,UserName = user}},out updated);
+                var trade = Exchange.Instance.AddAsk(country, new Ask{ Price = price, TimeStamp = DateTime.UtcNow,UserID = userId},out updated);
                 if (trade!=null)
                 {
-                    return ReturnMessage($"WOOOO! You traded! @{trade.Buyer.UserName} you now own {country}, and you owe @{user} *£{trade.Price}*. Pay up or I'll send the bailiffs!", context);
+                    //find buyer by name
+                    string buyerName;
+                    using (var db = new RWCDatabaseContext())
+                    {
+                        buyerName = db.Users.Find(trade.BuyerID).UserName;
+                    }
+                    return ReturnMessage($"WOOOO! You traded! @{buyerName} you now own {country}, and you owe @{user} *£{trade.Price}*. Pay up or I'll send the bailiffs!", context);
                 }
                 if (updated)
                 {
@@ -202,13 +214,13 @@ namespace RWCExchange
             {
                 return ReturnMessage("This country is already out of the cup. Come on, keep up!", context);
             }
-            User u;
+            int? userId;
             using (var database = new RWCDatabaseContext())
             {
-                u = database.Users.FirstOrDefault(i => i.UserName == owner);
+                userId = database.Users.FirstOrDefault(i => i.UserName == owner)?.UserID;
             }
-            if (u == null) return ReturnMessage("Invalid username!", context);
-            if (Exchange.Instance.SetOwner(country, u))
+            if (userId == null) return ReturnMessage("Invalid username!", context);
+            if (Exchange.Instance.SetOwner(country, userId.Value))
             {
                 ReturnMessage($"Congrats @{owner} You now own {country}.", context);
             }
@@ -243,7 +255,7 @@ namespace RWCExchange
                     return ReturnMessage($"Thanks @{user} You're bid for {country} has been dropped from the market.", context);
                 ReturnMessage($"{user} - Pull failed. Do you even have a bid in the market?", context);
             }
-            if(Exchange.Instance.PullAsk(country,user))return ReturnMessage($"Thanks @{user} You're offer to sell {country} has been dropped from the market.",context);
+            if(Exchange.Instance.PullAsk(country,userId))return ReturnMessage($"Thanks @{user} You're offer to sell {country} has been dropped from the market.",context);
             return ReturnMessage($"@{user} - Pull failed. Do you even have a sell offer in the market?", context);
         }
 

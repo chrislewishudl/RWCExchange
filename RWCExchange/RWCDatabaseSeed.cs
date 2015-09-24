@@ -6,14 +6,16 @@ using RWCExchange.Models;
 
 namespace RWCExchange
 {
-    public class RWCDatabaseSeed : DropCreateDatabaseIfModelChanges<RWCDatabaseContext>
+    public class RWCDatabaseSeed : IDatabaseInitializer<RWCDatabaseContext>
     {
-        protected override void Seed(RWCDatabaseContext context)
+        public void InitializeDatabase(RWCDatabaseContext context)
         {
-            var countryCodes =  new List<string> { "ARG", "AUS", "CAN", "ENG", "FJI", "FRA", "GEO", "IRE", "ITA", "JPN", "NAM", "NZL", "ROM", "SAM", "SCO", "RSA", "TGA", "URU", "USA", "WAL" };
+            var existing = context.Countries.Any();
+            if (existing) return;
+            var countryCodes = new List<string> { "ARG", "AUS", "CAN", "ENG", "FJI", "FRA", "GEO", "IRE", "ITA", "JPN", "NAM", "NZL", "ROM", "SAM", "SCO", "RSA", "TGA", "URU", "USA", "WAL" };
             context.Countries.AddRange(countryCodes.Select(i => new Country { Code = i }));
             context.SaveChanges();
-            var users = new Dictionary<string,ICollection<Country>>
+            var users = new Dictionary<string, ICollection<Country>>
                         {
                             { "jon",new Collection<Country> {context.Countries.FirstOrDefault(i=>i.Code=="JPN")}},
                             {"tbone",new Collection<Country> {context.Countries.FirstOrDefault(i=>i.Code=="ROM")}},
@@ -36,9 +38,8 @@ namespace RWCExchange
                             {"jjramos",new Collection<Country> {context.Countries.FirstOrDefault(i=>i.Code=="USA")}},
                             {"house",new Collection<Country>()}
                         };
-            context.Users.AddRange(users.Select(i => new User{UserName = i.Key, Countries = i.Value}));
+            context.Users.AddRange(users.Select(i => new User { UserName = i.Key, Countries = i.Value }));
             context.SaveChanges();
-            base.Seed(context);
         }
     }
 }

@@ -1,4 +1,6 @@
-﻿namespace RWCExchange.Models
+﻿using System;
+
+namespace RWCExchange.Models
 {
     public class Trade
     {
@@ -13,5 +15,7 @@
         
         public int BuyerID { get; set; }
         public virtual User Buyer { get; set; }
+
+        public DateTime TimeStamp { get; set; }
     }
 }

@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
-using System.Data.Common;
+using System.Data.Entity;
 using System.Linq;
-using Antlr.Runtime.Misc;
 using RWCExchange.Models;
 
 namespace RWCExchange
@@ -40,7 +38,7 @@ namespace RWCExchange
         {
             using (var database = new RWCDatabaseContext())
             {
-                return database.Countries.FirstOrDefault(i => i.Code == country)
+                return database.Countries.Include(i=>i.User).FirstOrDefault(i => i.Code == country)
                     ?.User?.UserID == userId;
             }
         }
@@ -49,8 +47,10 @@ namespace RWCExchange
         {
             using (var database = new RWCDatabaseContext())
             {
-                var dbCountry = database.Countries.FirstOrDefault(i => i.Code == country);
-                return dbCountry?.Bids.ToList() ?? new List<Bid>();
+                var dbCountry = database.Countries
+                                .Include("Bids.User")
+                                .FirstOrDefault(i => i.Code == country);
+                return dbCountry?.Bids.OrderByDescending(i=>i.Price).ThenBy(i=>i.TimeStamp).ToList() ?? new List<Bid>();
             }
         }
 
@@ -58,7 +58,9 @@ namespace RWCExchange
         {
             using (var database = new RWCDatabaseContext())
             {
-                var dbCountry = database.Countries.FirstOrDefault(i => i.Code == country);
+                var dbCountry = database.Countries
+                                .Include("Ask.User")
+                                .FirstOrDefault(i => i.Code == country);
                 return dbCountry?.Ask;
             }
         }
@@ -79,11 +81,16 @@ namespace RWCExchange
         {
             using (var database = new RWCDatabaseContext())
             {
-                var dbCountry = database.Countries.First(i => i.Code == country);
+                var dbCountry = database.Countries
+                    .Include(i=>i.Bids)
+                    .Include(i=>i.Ask)
+                    .Include("User.Countries")
+                    .First(i => i.Code == country);
                 var dbBids = dbCountry.Bids.ToList();
                 var dbAsk = dbCountry.Ask;
-                var existingForUser = dbBids.FirstOrDefault(i => i.User.UserID == bid.User.UserID);
+                var existingForUser = dbBids.FirstOrDefault(i => i.User.UserID == bid.UserID);
                 updated = false;
+                bid.CountryID = dbCountry.CountryID;
                 if (existingForUser != null)
                 {
                     existingForUser.TimeStamp = bid.TimeStamp;
@@ -98,10 +105,9 @@ namespace RWCExchange
                         return null;
                     }
                 }
-                bid.CountryID = dbCountry.CountryID;
                 if (dbAsk == null)
                 {
-                    dbBids.Add(bid);
+                    dbCountry.Bids.Add(bid);
                     database.SaveChanges();
                     return null;
                 }
@@ -110,19 +116,18 @@ namespace RWCExchange
                     var currentSeller = dbCountry.User.UserID;
                     dbCountry.Ask = null;
                     dbCountry.User.Countries.Remove(dbCountry);
-                    dbCountry.User = bid.User;
+                    dbCountry.UserID = bid.UserID;
                     if (updated)
                     {
-                        dbCountry.Bids.Remove(existingForUser);
+                        database.Bids.Remove(existingForUser);
                     }
                     var trade = new Trade
                     {
                         BuyerID = bid.UserID,
-                        Buyer = bid.User,
                         CountryID = dbCountry.CountryID,
                         Price = bid.Price,
                         SellerID =currentSeller,
-                        Seller = dbCountry.User
+                        TimeStamp = DateTime.UtcNow
                     };
                     database.Trades.Add(trade);
                     database.SaveChanges();
@@ -139,11 +144,15 @@ namespace RWCExchange
         {
             using (var database = new RWCDatabaseContext())
             {
-                var dbCountry = database.Countries.First(i => i.Code == country);
+                var dbCountry = database.Countries
+                    .Include(i => i.Bids)
+                    .Include(i => i.Ask)
+                    .Include("User.Countries")
+                    .First(i => i.Code == country);
                 var dbBids = dbCountry.Bids.ToList();
                 var dbAsk = dbCountry.Ask;
                 updated = false;
-                if (dbAsk != null && dbCountry.User.UserID==ask.User.UserID)
+                if (dbAsk != null && dbCountry.User.UserID==ask.UserID)
                 {
                     dbAsk.TimeStamp = ask.TimeStamp;
                     dbAsk.Price = ask.Price;
@@ -153,6 +162,7 @@ namespace RWCExchange
                     {
                         return null;
                     }
+
                 }
                 ask.CountryID = dbCountry.CountryID;
                 if (!dbBids.Any() && dbAsk==null)
@@ -166,18 +176,16 @@ namespace RWCExchange
                                        .First();
                 if (highestBid.Price >= ask.Price)
                 {
-                    dbBids.Remove(highestBid);
+                    database.Bids.Remove(highestBid);
                     dbCountry.User.Countries.Remove(dbCountry);
                     dbCountry.User = highestBid.User;
                     dbCountry.Ask = null;
                     var trade = new Trade()
                     {
                         BuyerID = highestBid.UserID,
-                        Buyer = highestBid.User,
                         SellerID = ask.UserID,
-                        Seller = ask.User,
                         CountryID = dbCountry.CountryID,
-                        Price = ask.Price
+                        Price = ask.Price,
                     };
                     database.Trades.Add(trade);
                     database.SaveChanges();
@@ -195,7 +203,7 @@ namespace RWCExchange
         {
             using (var database = new RWCDatabaseContext())
             {
-                var dbCountry = database.Countries.FirstOrDefault(i => i.Code == country);
+                var dbCountry = database.Countries.Include("Bids.User").FirstOrDefault(i => i.Code == country);
                 return dbCountry==null||!dbCountry.Bids.Any()?null: dbCountry.Bids.First();
             }
             
@@ -205,7 +213,7 @@ namespace RWCExchange
         {
             using (var database = new RWCDatabaseContext())
             {
-                var dbCountry = database.Countries.FirstOrDefault(i => i.Code == country);
+                var dbCountry = database.Countries.Include("Ask.User").FirstOrDefault(i => i.Code == country);
                 return dbCountry?.Ask;
             }
         }
@@ -214,10 +222,12 @@ namespace RWCExchange
         {
             using (var database = new RWCDatabaseContext())
             {
-                var dbCountry = database.Countries.FirstOrDefault(i => i.Code == country);
+                var dbCountry = database.Countries
+                    .Include(i=>i.Bids)
+                    .FirstOrDefault(i => i.Code == country);
                 if (dbCountry == null || dbCountry.IsDropped) return null;
                 dbCountry.Ask = null;
-                dbCountry.Bids.Clear();
+                database.Bids.RemoveRange(dbCountry.Bids);
                 var currentOwner = dbCountry.User?.UserName;
                 dbCountry.User = null;
                 dbCountry.IsDropped = true;
@@ -239,34 +249,37 @@ namespace RWCExchange
         {
             using (var database = new RWCDatabaseContext())
             {
-                var dbCountry = database.Countries.FirstOrDefault(i => i.Code == country);
+                var dbCountry = database.Countries
+                    .Include(i=>i.Bids)
+                    .FirstOrDefault(i => i.Code == country);
                 if (dbCountry == null || dbCountry.IsDropped) return false;
                 var bid = dbCountry.Bids.FirstOrDefault(i => i.UserID == userId);
                 if (bid == null) return false;
-                dbCountry.Bids.Remove(bid);
+                database.Bids.Remove(bid);
                 database.SaveChanges();
                 return true;
             }
         }
 
-        public bool PullAsk(string country, string user)
+        public bool PullAsk(string country, int userId)
         {
             using (var database = new RWCDatabaseContext())
             {
-                var dbCountry = database.Countries.FirstOrDefault(i => i.Code == country);
+                var dbCountry = database.Countries
+                    .FirstOrDefault(i => i.Code == country);
                 if (dbCountry == null || dbCountry.IsDropped) return false;
-                if(dbCountry.Ask==null || dbCountry.User.UserName!=user) return false;
+                if(dbCountry.Ask==null || dbCountry.User.UserID!=userId) return false;
                 dbCountry.Ask = null;
                 database.SaveChanges();
                 return true;
             }
-
         }
 
-        public bool SetOwner(string country, User user)
+        public bool SetOwner(string country, int userId)
         {
             using (var database = new RWCDatabaseContext())
             {
+                var user = database.Users.Find(userId);
                 var dbCountry = database.Countries.FirstOrDefault(i => i.Code == country);
                 if (dbCountry == null || dbCountry.IsDropped) return false;
                 if (user.UserName == "house")
@@ -274,7 +287,9 @@ namespace RWCExchange
                     dbCountry.Bids.Clear();
                     dbCountry.Ask = new Ask { Price = 0.01, TimeStamp = DateTime.Now, UserID = user.UserID,CountryID = dbCountry.CountryID};
                 }
+                user.Countries.Add(dbCountry);
                 dbCountry.User = user;
+                dbCountry.Ask = null;
                 database.SaveChanges();
                 return true;
             }
