@@ -12,7 +12,7 @@ namespace RWCExchange
         {
             var existing = context.Countries.Any();
             if (existing) return;
-            var countryCodes = new List<string> { "ARG", "AUS", "CAN", "ENG", "FJI", "FRA", "GEO", "IRE", "ITA", "JPN", "NAM", "NZL", "ROM", "SAM", "SCO", "RSA", "TGA", "URU", "USA", "WAL" };
+            var countryCodes = new List<string> { "ALB", "AUS", "BEL", "CRO", "CZR", "ENG", "FRA", "GER", "HUN", "ICE", "ITA", "NIR", "POL", "POR", "RIR", "ROM", "RUS", "SLO", "SPA", "SWE", "SWI", "TUR", "UKR", "WAL" };
             context.Countries.AddRange(countryCodes.Select(i => new Country { Code = i }));
             context.SaveChanges();
             var users = new Dictionary<string, ICollection<Country>>
